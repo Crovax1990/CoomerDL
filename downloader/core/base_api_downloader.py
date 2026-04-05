@@ -51,9 +51,26 @@ class BaseApiDownloader:
         self.rate_limit_interval = rate_limit_interval
         self.download_mode = "multi"
 
-        self.video_extensions = (".mp4", ".mkv", ".webm", ".mov", ".avi", ".flv", ".wmv", ".m4v")
+        self.video_extensions = (
+            ".mp4",
+            ".mkv",
+            ".webm",
+            ".mov",
+            ".avi",
+            ".flv",
+            ".wmv",
+            ".m4v",
+        )
         self.image_extensions = (".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff")
-        self.document_extensions = (".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx")
+        self.document_extensions = (
+            ".pdf",
+            ".doc",
+            ".docx",
+            ".xls",
+            ".xlsx",
+            ".ppt",
+            ".pptx",
+        )
         self.compressed_extensions = (".zip", ".rar", ".7z", ".tar", ".gz")
 
         self.download_images = download_images
@@ -127,7 +144,9 @@ class BaseApiDownloader:
 
     def load_download_cache(self):
         with self.db_lock:
-            self.db_cursor.execute("SELECT media_url, file_path, file_size FROM downloads")
+            self.db_cursor.execute(
+                "SELECT media_url, file_path, file_size FROM downloads"
+            )
             rows = self.db_cursor.fetchall()
         self.download_cache = {row[0]: (row[1], row[2]) for row in rows}
 
@@ -180,7 +199,14 @@ class BaseApiDownloader:
         self.max_retries = max_retries
         self.retry_interval = retry_interval
 
-    def get_filename(self, media_url, post_id=None, post_name=None, attachment_index=1, post_time=None):
+    def get_filename(
+        self,
+        media_url,
+        post_id=None,
+        post_name=None,
+        attachment_index=1,
+        post_time=None,
+    ):
         base_name = os.path.basename(media_url).split("?")[0]
         name_no_ext, extension = os.path.splitext(base_name)
 
@@ -196,14 +222,24 @@ class BaseApiDownloader:
             sanitized = sanitize(name_no_ext) or "file"
             return f"{sanitized}_{attachment_index}{extension}"
         elif mode == 1:
-            sanitized_post = sanitize(post_name or "") or (f"post_{post_id}" if post_id else "post")
+            sanitized_post = sanitize(post_name or "") or (
+                f"post_{post_id}" if post_id else "post"
+            )
             short_hash = f"{hash(media_url) & 0xFFFF:04x}"
             return f"{sanitized_post}_{attachment_index}_{short_hash}{extension}"
         elif mode == 2:
-            sanitized_post = sanitize(post_name or "") or (f"post_{post_id}" if post_id else "post")
-            return f"{sanitized_post} - {post_id}_{attachment_index}{extension}" if post_id else f"{sanitized_post}_{attachment_index}{extension}"
+            sanitized_post = sanitize(post_name or "") or (
+                f"post_{post_id}" if post_id else "post"
+            )
+            return (
+                f"{sanitized_post} - {post_id}_{attachment_index}{extension}"
+                if post_id
+                else f"{sanitized_post}_{attachment_index}{extension}"
+            )
         elif mode == 3:
-            sanitized_post = sanitize(post_name or "") or (f"post_{post_id}" if post_id else "post")
+            sanitized_post = sanitize(post_name or "") or (
+                f"post_{post_id}" if post_id else "post"
+            )
             sanitized_time = sanitize(post_time or "")
             short_hash = f"{hash(media_url) & 0xFFFF:04x}"
             return f"{sanitized_time} - {sanitized_post}_{attachment_index}_{short_hash}{extension}"
@@ -223,7 +259,9 @@ class BaseApiDownloader:
             folder_name = "other"
 
         if self.folder_structure == "post_number" and post_id:
-            return os.path.join(self.download_folder, user_id, f"post_{post_id}", folder_name)
+            return os.path.join(
+                self.download_folder, user_id, f"post_{post_id}", folder_name
+            )
 
         return os.path.join(self.download_folder, user_id, folder_name)
 
@@ -248,12 +286,16 @@ class BaseApiDownloader:
 
                 try:
                     self.domain_last_request[domain] = time.time()
-                    response = self.session.get(url, stream=True, headers=headers, timeout=self.request_timeout)
+                    response = self.session.get(
+                        url, stream=True, headers=headers, timeout=self.request_timeout
+                    )
                     sc = response.status_code
 
                     if sc in (403, 404) and ("coomer" in domain or "kemono" in domain):
                         if self.update_progress_callback:
-                            self.update_progress_callback(0, 0, status=f"{sc} - probing subdomains")
+                            self.update_progress_callback(
+                                0, 0, status=f"{sc} - probing subdomains"
+                            )
 
                         with self.subdomain_locks[path]:
                             if path in self.subdomain_cache:
@@ -265,14 +307,23 @@ class BaseApiDownloader:
                         if alt_url != url:
                             found = urlparse(alt_url).netloc
                             if self.update_progress_callback:
-                                self.update_progress_callback(0, 0, status=f"Subdomain found: {found}")
+                                self.update_progress_callback(
+                                    0, 0, status=f"Subdomain found: {found}"
+                                )
 
-                            response = self.session.get(alt_url, stream=True, headers=headers, timeout=self.request_timeout)
+                            response = self.session.get(
+                                alt_url,
+                                stream=True,
+                                headers=headers,
+                                timeout=self.request_timeout,
+                            )
                             response.raise_for_status()
                             return response
 
                         if self.update_progress_callback:
-                            self.update_progress_callback(0, 0, status="Exhausted subdomains")
+                            self.update_progress_callback(
+                                0, 0, status="Exhausted subdomains"
+                            )
                         return None
 
                     response.raise_for_status()
@@ -314,7 +365,11 @@ class BaseApiDownloader:
                         if attempt < max_retries:
                             time.sleep(self.retry_interval)
 
-                    if status_code in (403, 404) and ("coomer" in domain or "kemono" in domain) and attempt == max_retries:
+                    if (
+                        status_code in (403, 404)
+                        and ("coomer" in domain or "kemono" in domain)
+                        and attempt == max_retries
+                    ):
                         self.log(
                             "FINAL_FAILURE_ACCESSING_URL",
                             url=url,
@@ -329,12 +384,21 @@ class BaseApiDownloader:
 
         path = original_path
         if not original_path.startswith("/data/"):
-            path = ("/data" + original_path) if not original_path.startswith("/data") else original_path
+            path = (
+                ("/data" + original_path)
+                if not original_path.startswith("/data")
+                else original_path
+            )
 
         host = parsed.netloc
 
         if "coomer" in host:
-            base_domains = ["coomer.st"]
+            base_domains = [
+                "coomer.st",
+                "coomer.su",
+                "official.coomer.com.co",
+                "site1.coomer.com.co",
+            ]
         elif "kemono" in host:
             base_domains = ["kemono.cr", "kemono.su"]
         else:
@@ -346,10 +410,17 @@ class BaseApiDownloader:
                 test_url = parsed._replace(netloc=domain, path=path).geturl()
 
                 if self.update_progress_callback:
-                    self.update_progress_callback(0, 0, status=f"Testing subdomain: {domain}")
+                    self.update_progress_callback(
+                        0, 0, status=f"Testing subdomain: {domain}"
+                    )
 
                 try:
-                    resp = self.session.get(test_url, headers=self.headers, timeout=self.request_timeout, stream=True)
+                    resp = self.session.get(
+                        test_url,
+                        headers=self.headers,
+                        timeout=self.request_timeout,
+                        stream=True,
+                    )
                     if resp.status_code == 200:
                         return test_url
                 except Exception:
@@ -373,9 +444,13 @@ class BaseApiDownloader:
 
         extension = os.path.splitext(media_url.split("?")[0])[1].lower()
 
-        if (extension in self.image_extensions and not self.download_images) or \
-        (extension in self.video_extensions and not self.download_videos) or \
-        (extension in self.compressed_extensions and not self.download_compressed):
+        if (
+            (extension in self.image_extensions and not self.download_images)
+            or (extension in self.video_extensions and not self.download_videos)
+            or (
+                extension in self.compressed_extensions and not self.download_compressed
+            )
+        ):
             self.log("SKIPPING_MEDIA_DUE_TO_SETTINGS", media_url=media_url)
             return
 
@@ -448,8 +523,16 @@ class BaseApiDownloader:
                             downloaded_size += len(chunk)
                             if self.update_progress_callback:
                                 elapsed_time = time.time() - self.start_time
-                                speed = downloaded_size / elapsed_time if elapsed_time > 0 else 0
-                                remaining_time = (total_size - downloaded_size) / speed if speed > 0 else 0
+                                speed = (
+                                    downloaded_size / elapsed_time
+                                    if elapsed_time > 0
+                                    else 0
+                                )
+                                remaining_time = (
+                                    (total_size - downloaded_size) / speed
+                                    if speed > 0
+                                    else 0
+                                )
                                 self.update_progress_callback(
                                     downloaded_size,
                                     total_size,
@@ -468,7 +551,9 @@ class BaseApiDownloader:
                         media_url=media_url,
                     )
 
-                    part_response = self.safe_request(media_url, max_retries=self.max_retries, headers=resume_headers)
+                    part_response = self.safe_request(
+                        media_url, max_retries=self.max_retries, headers=resume_headers
+                    )
                     if part_response is None:
                         raise Exception("RESUMPTION_FAILED_AFTER_RETRIES")
 
@@ -481,8 +566,16 @@ class BaseApiDownloader:
                                 downloaded_size += len(chunk)
                                 if self.update_progress_callback:
                                     elapsed_time = time.time() - self.start_time
-                                    speed = downloaded_size / elapsed_time if elapsed_time > 0 else 0
-                                    remaining_time = (total_size - downloaded_size) / speed if speed > 0 else 0
+                                    speed = (
+                                        downloaded_size / elapsed_time
+                                        if elapsed_time > 0
+                                        else 0
+                                    )
+                                    remaining_time = (
+                                        (total_size - downloaded_size) / speed
+                                        if speed > 0
+                                        else 0
+                                    )
                                     self.update_progress_callback(
                                         downloaded_size,
                                         total_size,
@@ -510,7 +603,9 @@ class BaseApiDownloader:
                 self.log("DOWNLOAD_SUCCESS_FROM", media_url=media_url)
 
                 if self.update_global_progress_callback:
-                    self.update_global_progress_callback(self.completed_files, self.total_files)
+                    self.update_global_progress_callback(
+                        self.completed_files, self.total_files
+                    )
 
                 with self.db_lock:
                     self.db_cursor.execute(
@@ -526,7 +621,9 @@ class BaseApiDownloader:
                 return
 
             except Exception as e:
-                if str(e) == "CANCELLATION_REQUESTED" or str(e) == self._translate_text("CANCELLATION_REQUESTED"):
+                if str(e) == "CANCELLATION_REQUESTED" or str(e) == self._translate_text(
+                    "CANCELLATION_REQUESTED"
+                ):
                     if os.path.exists(tmp_path):
                         os.remove(tmp_path)
                     self.log("DOWNLOAD_CANCELLED_FROM", media_url=media_url)

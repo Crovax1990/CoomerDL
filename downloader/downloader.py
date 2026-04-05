@@ -10,6 +10,7 @@ import time
 import sqlite3
 import random
 
+
 class Downloader:
     def __init__(
         self,
@@ -53,9 +54,26 @@ class Downloader:
         self.rate_limit_interval = rate_limit_interval
         self.download_mode = "multi"
 
-        self.video_extensions = (".mp4", ".mkv", ".webm", ".mov", ".avi", ".flv", ".wmv", ".m4v")
+        self.video_extensions = (
+            ".mp4",
+            ".mkv",
+            ".webm",
+            ".mov",
+            ".avi",
+            ".flv",
+            ".wmv",
+            ".m4v",
+        )
         self.image_extensions = (".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff")
-        self.document_extensions = (".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx")
+        self.document_extensions = (
+            ".pdf",
+            ".doc",
+            ".docx",
+            ".xls",
+            ".xlsx",
+            ".ppt",
+            ".pptx",
+        )
         self.compressed_extensions = (".zip", ".rar", ".7z", ".tar", ".gz")
 
         self.download_images = download_images
@@ -81,7 +99,7 @@ class Downloader:
         self.subdomain_locks = defaultdict(threading.Lock)
         self.request_timeout = (10, 120)
         self.domain_name = "coomer"
-        
+
         self.domain_error_state = defaultdict(
             lambda: {
                 "burst_count": 0,
@@ -146,7 +164,9 @@ class Downloader:
 
     def load_download_cache(self):
         with self.db_lock:
-            self.db_cursor.execute("SELECT media_url, file_path, file_size FROM downloads")
+            self.db_cursor.execute(
+                "SELECT media_url, file_path, file_size FROM downloads"
+            )
             rows = self.db_cursor.fetchall()
         self.download_cache = {row[0]: (row[1], row[2]) for row in rows}
 
@@ -209,7 +229,14 @@ class Downloader:
                 self.enable_widgets_callback()
             self.log("ALL_DOWNLOADS_COMPLETED_OR_CANCELLED")
 
-    def get_filename(self, media_url, post_id=None, post_name=None, attachment_index=1, post_time=None):
+    def get_filename(
+        self,
+        media_url,
+        post_id=None,
+        post_name=None,
+        attachment_index=1,
+        post_time=None,
+    ):
         base_name = os.path.basename(media_url).split("?")[0]
         name_no_ext, extension = os.path.splitext(base_name)
 
@@ -225,17 +252,24 @@ class Downloader:
             sanitized = sanitize(name_no_ext) or "file"
             return f"{sanitized}_{attachment_index}{extension}"
         elif mode == 1:
-            sanitized_post = sanitize(post_name or "") or (f"post_{post_id}" if post_id else "post")
+            sanitized_post = sanitize(post_name or "") or (
+                f"post_{post_id}" if post_id else "post"
+            )
             short_hash = f"{hash(media_url) & 0xFFFF:04x}"
             return f"{sanitized_post}_{attachment_index}_{short_hash}{extension}"
         elif mode == 2:
-            sanitized_post = sanitize(post_name or "") or (f"post_{post_id}" if post_id else "post")
+            sanitized_post = sanitize(post_name or "") or (
+                f"post_{post_id}" if post_id else "post"
+            )
             return (
                 f"{sanitized_post} - {post_id}_{attachment_index}{extension}"
-                if post_id else f"{sanitized_post}_{attachment_index}{extension}"
+                if post_id
+                else f"{sanitized_post}_{attachment_index}{extension}"
             )
         elif mode == 3:
-            sanitized_post = sanitize(post_name or "") or (f"post_{post_id}" if post_id else "post")
+            sanitized_post = sanitize(post_name or "") or (
+                f"post_{post_id}" if post_id else "post"
+            )
             sanitized_time = sanitize(post_time or "")
             short_hash = f"{hash(media_url) & 0xFFFF:04x}"
             return f"{sanitized_time} - {sanitized_post}_{attachment_index}_{short_hash}{extension}"
@@ -255,7 +289,9 @@ class Downloader:
             folder_name = "other"
 
         if self.folder_structure == "post_number" and post_id:
-            return os.path.join(self.download_folder, user_id, f"post_{post_id}", folder_name)
+            return os.path.join(
+                self.download_folder, user_id, f"post_{post_id}", folder_name
+            )
 
         return os.path.join(self.download_folder, user_id, folder_name)
 
@@ -278,7 +314,11 @@ class Downloader:
 
         elapsed_time = now - start_time
         speed = downloaded_size / elapsed_time if elapsed_time > 0 else 0
-        remaining_time = (total_size - downloaded_size) / speed if speed > 0 and total_size > 0 else 0
+        remaining_time = (
+            (total_size - downloaded_size) / speed
+            if speed > 0 and total_size > 0
+            else 0
+        )
 
         self.update_progress_callback(
             downloaded_size,
@@ -289,7 +329,7 @@ class Downloader:
             eta=remaining_time,
         )
         return now
-    
+
     def _compute_retry_delay(self, attempt_index):
         base = max(float(self.retry_interval or 0), 0.1)
         return (base * (attempt_index + 1)) + random.uniform(0.35, 1.15)
@@ -378,7 +418,9 @@ class Downloader:
 
                     if sc in (403, 404) and ("coomer" in domain or "kemono" in domain):
                         if self.update_progress_callback:
-                            self.update_progress_callback(0, 0, status=f"{sc} - probing subdomains")
+                            self.update_progress_callback(
+                                0, 0, status=f"{sc} - probing subdomains"
+                            )
 
                         with self.subdomain_locks[path]:
                             if path in self.subdomain_cache:
@@ -390,7 +432,9 @@ class Downloader:
                         if alt_url != url:
                             found = urlparse(alt_url).netloc
                             if self.update_progress_callback:
-                                self.update_progress_callback(0, 0, status=f"Subdomain found: {found}")
+                                self.update_progress_callback(
+                                    0, 0, status=f"Subdomain found: {found}"
+                                )
 
                             alt_domain = urlparse(alt_url).netloc
                             if not self._wait_for_domain_cooldown(alt_domain):
@@ -407,7 +451,9 @@ class Downloader:
                             return response
 
                         if self.update_progress_callback:
-                            self.update_progress_callback(0, 0, status="Exhausted subdomains")
+                            self.update_progress_callback(
+                                0, 0, status="Exhausted subdomains"
+                            )
                         return None
 
                     response.raise_for_status()
@@ -456,7 +502,11 @@ class Downloader:
                         if attempt < max_retries:
                             time.sleep(self._compute_retry_delay(attempt))
 
-                    if status_code in (403, 404) and ("coomer" in domain or "kemono" in domain) and attempt == max_retries:
+                    if (
+                        status_code in (403, 404)
+                        and ("coomer" in domain or "kemono" in domain)
+                        and attempt == max_retries
+                    ):
                         self.log(
                             "FINAL_FAILURE_ACCESSING_URL",
                             url=url,
@@ -471,12 +521,21 @@ class Downloader:
 
         path = original_path
         if not original_path.startswith("/data/"):
-            path = ("/data" + original_path) if not original_path.startswith("/data") else original_path
+            path = (
+                ("/data" + original_path)
+                if not original_path.startswith("/data")
+                else original_path
+            )
 
         host = parsed.netloc
 
         if "coomer" in host:
-            base_domains = ["coomer.st"]
+            base_domains = [
+                "coomer.st",
+                "coomer.su",
+                "official.coomer.com.co",
+                "site1.coomer.com.co",
+            ]
         elif "kemono" in host:
             base_domains = ["kemono.cr", "kemono.su"]
         else:
@@ -488,7 +547,9 @@ class Downloader:
                 test_url = parsed._replace(netloc=domain, path=path).geturl()
 
                 if self.update_progress_callback:
-                    self.update_progress_callback(0, 0, status=f"Testing subdomain: {domain}")
+                    self.update_progress_callback(
+                        0, 0, status=f"Testing subdomain: {domain}"
+                    )
 
                 try:
                     resp = self.session.get(
@@ -595,11 +656,13 @@ class Downloader:
         media_urls = []
 
         main_file = post.get("file") or {}
-        u = _full(main_file.get("path") or main_file.get("url") or main_file.get("name"))
+        u = _full(
+            main_file.get("path") or main_file.get("url") or main_file.get("name")
+        )
         if u:
             media_urls.append(u)
 
-        for att in (post.get("attachments") or []):
+        for att in post.get("attachments") or []:
             u = _full(att.get("path") or att.get("url") or att.get("name"))
             if u:
                 media_urls.append(u)
@@ -622,7 +685,10 @@ class Downloader:
                 if (
                     (ext in self.image_extensions and not self.download_images)
                     or (ext in self.video_extensions and not self.download_videos)
-                    or (ext in self.compressed_extensions and not self.download_compressed)
+                    or (
+                        ext in self.compressed_extensions
+                        and not self.download_compressed
+                    )
                 ):
                     continue
 
@@ -660,7 +726,9 @@ class Downloader:
         if (
             (extension in self.image_extensions and not self.download_images)
             or (extension in self.video_extensions and not self.download_videos)
-            or (extension in self.compressed_extensions and not self.download_compressed)
+            or (
+                extension in self.compressed_extensions and not self.download_compressed
+            )
         ):
             self.log("SKIPPING_MEDIA_DUE_TO_SETTINGS", media_url=media_url)
             return
@@ -819,7 +887,9 @@ class Downloader:
                 self.log("DOWNLOAD_SUCCESS_FROM", media_url=media_url)
 
                 if self.update_global_progress_callback:
-                    self.update_global_progress_callback(self.completed_files, self.total_files)
+                    self.update_global_progress_callback(
+                        self.completed_files, self.total_files
+                    )
 
                 with self.db_lock:
                     self.db_cursor.execute(
@@ -852,7 +922,16 @@ class Downloader:
             with self.active_downloads_lock:
                 self.active_downloads.discard(media_url)
 
-    def download_media(self, site, user_id, service, query=None, download_all=False, initial_offset=0, only_first_page=False):
+    def download_media(
+        self,
+        site,
+        user_id,
+        service,
+        query=None,
+        download_all=False,
+        initial_offset=0,
+        only_first_page=False,
+    ):
         try:
             self.domain_name = "kemono" if "kemono" in site else "coomer"
             self.log("CK_STARTING_DOWNLOAD_PROCESS")
@@ -917,7 +996,9 @@ class Downloader:
     def download_single_post(self, site, post_id, service, user_id):
         try:
             self.domain_name = "kemono" if "kemono" in site else "coomer"
-            posts = self.fetch_user_posts(site, user_id, service, specific_post_id=post_id)
+            posts = self.fetch_user_posts(
+                site, user_id, service, specific_post_id=post_id
+            )
             if not posts:
                 self.log("CK_NO_POST_FOUND_FOR_ID")
                 return

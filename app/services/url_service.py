@@ -19,11 +19,30 @@ class ParsedDownloadUrl:
     offset: int = 0
 
 
+COOMER_DOMAINS = [
+    "coomer.st",
+    "coomer.su",
+    "official.coomer.com.co",
+    "site1.coomer.com.co",
+]
+KEMONO_DOMAINS = ["kemono.cr", "kemono.su"]
+
+
+def _is_coomer_kemono_domain(netloc: str) -> bool:
+    if netloc in COOMER_DOMAINS or netloc.endswith(".coomer.com.co"):
+        return True
+    if netloc in KEMONO_DOMAINS:
+        return True
+    return False
+
+
 class UrlService:
-    def extract_ck_parameters(self, url: ParseResult) -> tuple[Optional[str], Optional[str], Optional[str]]:
+    def extract_ck_parameters(
+        self, url: ParseResult
+    ) -> tuple[Optional[str], Optional[str], Optional[str]]:
         match = re.search(
             r"/(?P<service>[^/?]+)(/user/(?P<user>[^/?]+)(/post/(?P<post>[^/?]+))?)?",
-            url.path
+            url.path,
         )
         if match:
             service, user, post = match.group("service", "user", "post")
@@ -66,7 +85,7 @@ class UrlService:
                 is_profile=not is_post,
             )
 
-        if parsed.netloc in ["coomer.st", "kemono.cr"]:
+        if _is_coomer_kemono_domain(parsed.netloc):
             service, user, post = self.extract_ck_parameters(parsed)
             query, offset = self.extract_ck_query(parsed)
 
